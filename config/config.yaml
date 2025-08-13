@@ -1,0 +1,49 @@
+template_directory: "templates"
+template_file: "email_template.html"
+
+sql_queries:
+  get_records: |
+    SELECT DISTINCT
+        CASE 
+            WHEN p.persnbr IS NOT NULL THEN p.persnbr
+            WHEN o.orgnbr IS NOT NULL THEN o.orgnbr
+        END AS ENTITY_NUMBER,
+        a.acctnbr AS ACCTNBR,
+        CASE 
+            WHEN p.persnbr IS NOT NULL THEN 'pers'
+            WHEN o.orgnbr IS NOT NULL THEN 'org'
+        END AS ENTITY_TYPE,
+        TO_CHAR(a.closedate, 'MM/DD/YYYY') AS CLOSE_DATE
+    FROM account a
+    LEFT JOIN person p ON a.persnbr = p.persnbr
+    LEFT JOIN organization o ON a.orgnbr = o.orgnbr
+    {{close_date_join}}
+    WHERE a.status = 'CLS'
+    ORDER BY ENTITY_NUMBER
+
+  update_pers_stdl: |
+    MERGE INTO persuserfield puf
+    USING (SELECT ? AS persnbr FROM dual) src
+    ON (puf.persnbr = src.persnbr AND puf.userfieldcd = 'STDL')
+    WHEN MATCHED THEN
+        UPDATE SET puf.uservalue = 'E'
+    WHEN NOT MATCHED THEN
+        INSERT (persnbr, userfieldcd, uservalue)
+        VALUES (src.persnbr, 'STDL', 'E')
+
+  update_org_stdl: |
+    MERGE INTO orguserfield ouf
+    USING (SELECT ? AS orgnbr FROM dual) src
+    ON (ouf.orgnbr = src.orgnbr AND ouf.userfieldcd = 'STDL')
+    WHEN MATCHED THEN
+        UPDATE SET ouf.uservalue = 'E'
+    WHEN NOT MATCHED THEN
+        INSERT (orgnbr, userfieldcd, uservalue)
+        VALUES (src.orgnbr, 'STDL', 'E')
+
+join_fragments:
+  date_specific: |
+    AND a.closedate = TO_DATE('{{run_date}}', 'MM-DD-YYYY')
+  
+  full_cleanup: |
+    AND a.closedate IS NOT NULL
