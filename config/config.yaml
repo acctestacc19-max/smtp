@@ -1,0 +1,34 @@
+sql_queries:
+  get_records: |
+    SELECT 
+      entity_number as ENTITY_NUMBER,
+      acctnbr as ACCTNBR,
+      entity_type as ENTITY_TYPE,
+      close_date as CLOSE_DATE
+    FROM test_table 
+    {{close_date_join}}
+  
+  update_pers_stdl: |
+    MERGE INTO persuserfield puf
+    USING (SELECT ? as persnbr FROM dual) src
+    ON (puf.persnbr = src.persnbr)
+    WHEN MATCHED THEN
+      UPDATE SET stdl = 'E'
+    WHEN NOT MATCHED THEN
+      INSERT (persnbr, stdl) VALUES (src.persnbr, 'E')
+  
+  update_org_stdl: |
+    MERGE INTO orguserfield ouf
+    USING (SELECT ? as orgnbr FROM dual) src
+    ON (ouf.orgnbr = src.orgnbr)
+    WHEN MATCHED THEN
+      UPDATE SET stdl = 'E'
+    WHEN NOT MATCHED THEN
+      INSERT (orgnbr, stdl) VALUES (src.orgnbr, 'E')
+
+join_fragments:
+  date_specific: "WHERE close_date = '{{run_date}}'"
+  full_cleanup: "WHERE close_date IS NOT NULL"
+
+template_directory: "templates"
+template_file: "email_template.html"
