@@ -1,0 +1,18 @@
+# Requirements for delivery_update_method.py
+# These packages need to be installed for the script to run properly
+
+# Database connectivity
+oracledb>=1.0.0
+
+# Template engine for email generation  
+Jinja2>=3.0.0
+
+# YAML configuration file parsing
+PyYAML>=6.0
+
+# Custom AppWorx library (internal dependency)
+# ftfcu_appworx  # This is an internal package - install separately
+
+# For testing
+pytest>=7.0.0  # Optional: for running tests with pytest
+coverage>=6.0   # Optional: for test coverage reporting

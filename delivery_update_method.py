@@ -35,7 +35,7 @@ class AppWorxEnum(Enum):
     FROM_EMAIL_ADDR = auto()
     TEST_EMAIL_ADDR = auto()
 
-    def _str_(self):
+    def __str__(self):
         return self.name
 
 
@@ -220,7 +220,7 @@ def update_stdl_userfield(script_data: ScriptData, records: list[dict], table_na
             error_idx = error.offset
 
             # get entity nbr from merge list
-            merge_ent_nbr = entity_nbrs[error_idx]
+            merge_ent_nbr = entity_nbrs[error_idx][0]  # Extract the actual number from the list
 
             print(f'Error {error.message} at row {error_idx} during merge.'
                   f"{col_name}: {merge_ent_nbr}")
@@ -243,8 +243,10 @@ def update_stdl_userfield(script_data: ScriptData, records: list[dict], table_na
     else:
         dbh.rollback()
 
+    # Extract failed entity numbers from the fails list
+    failed_entity_numbers = [fail[0] for fail in fails]
     successes = [(r['ENTITY_NUMBER'], r['ACCTNBR'], r['ENTITY_TYPE'], r['CLOSE_DATE'], 'Success') for r in records
-                 if r['ENTITY_NUMBER'] not in fails]
+                 if r['ENTITY_NUMBER'] not in failed_entity_numbers]
 
     print(f'Number Of Updated Records in {table_name} table : ', sth.rowcount, '\n')
 
@@ -309,7 +311,12 @@ def write_report(path, records, write_mode):
 def send_email(script_data: ScriptData, recipients: list) -> (bool, str):
     """Send email notification for failed updates"""
     apwx = script_data.apwx
-    to_address = recipients[0] if recipients else None
+    
+    # Check if we have recipients first
+    if not recipients:
+        return False, "No email recipients"
+    
+    to_address = recipients[0]
     if apwx.args.TEST_EMAIL_ADDR:
         to_address = apwx.args.TEST_EMAIL_ADDR
     from_address = apwx.args.FROM_EMAIL_ADDR
@@ -393,7 +400,7 @@ def get_email_template(config: Any) -> Any:
     # Templates are in a 'templates' subfolder relative to the script
     template_directory: str = config["template_directory"]
     template_dir = os.path.join(
-        os.path.dirname(os.path.abspath(_file_)), template_directory
+        os.path.dirname(os.path.abspath(__file__)), template_directory
     )
     file_loader = FileSystemLoader(template_dir)
     env = Environment(loader=file_loader)
@@ -423,7 +430,7 @@ def execute_sql_select(
         raise Exception(f"SQL error = {e}")
 
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     JobTime().print_start()
     run(parse_args(get_apwx()))
     JobTime().print_end()
